@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>RESCENE 영상 모아보기</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎞️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="title-row">
+        <h1>RESCENE <span>영상 모아보기</span></h1>
+        <p class="updated" id="updated">불러오는 중…</p>
+      </div>
+      <div class="controls">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="long" aria-selected="true">롱폼 <span class="count" id="count-long">0</span></button>
+          <button role="tab" data-tab="shorts" aria-selected="false">쇼츠 <span class="count" id="count-shorts">0</span></button>
+        </div>
+        <input id="filter" type="search" placeholder="제목·채널 검색" autocomplete="off">
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="rule" id="rule"></p>
+    <div id="list"></div>
+    <p class="empty" id="empty" hidden></p>
+  </main>
+
+  <footer class="wrap">
+    <details id="hidden-box" hidden>
+      <summary>숨긴 채널 <span id="hidden-count">0</span>개</summary>
+      <ul id="hidden-list"></ul>
+    </details>
+    <p class="foot-note">매일 저녁 7시 자동 갱신 · 롱폼은 리센느 전용 팬 채널 자동 제외</p>
+  </footer>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

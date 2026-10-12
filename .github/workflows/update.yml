@@ -1,0 +1,59 @@
+name: 매일 영상 갱신
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # 매일 19:00 KST (GitHub 사정으로 몇 분~수십 분 늦을 수 있음)
+  workflow_dispatch: # Actions 탭에서 수동 실행
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 테스트
+        run: python -m unittest discover -s tests
+
+      - name: 유튜브 검색
+        if: github.event_name != 'push'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python scripts/update.py
+
+      # push(예: blocklist.txt 수정) 때는 검색 없이 차단 목록만 반영 (API 할당량 절약)
+      - name: 차단 목록 반영
+        if: github.event_name == 'push'
+        run: python scripts/update.py --rebuild-only
+
+      - name: 결과 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "영상 목록 갱신 $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M')"
+          git push
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
