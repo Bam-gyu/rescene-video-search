@@ -1,4 +1,5 @@
 import sys
+import unicodedata
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,6 +45,17 @@ class PureFunctions(unittest.TestCase):
         self.assertFalse(u.is_short_video(200, 270, 480))  # 3분 초과 세로
         self.assertFalse(u.is_short_video(30, 0, 0))  # 정보 없음
 
+    def test_is_foreign(self):
+        def v(title, lang="", channel="UCx"):
+            return {"title": title, "lang": lang, "channelId": channel}
+        self.assertTrue(u.is_foreign(v("【RESCENE】20kg減量したミナミ")))  # 일본어
+        self.assertTrue(u.is_foreign(v("【RESCENE中字】大阪之旅真崩潰")))  # 중국어
+        self.assertTrue(u.is_foreign(v("ELA TEM 34 ANOS E PARECE PARTE DO RESCENE!!", lang="pt-BR")))
+        self.assertFalse(u.is_foreign(v("[K-POP] RESCENE Eats Like Family!", lang="ko")))  # 영어 제목, 한국어 음성
+        self.assertFalse(u.is_foreign(v("RESCENE - LOVE ATTACK")))  # 언어 정보 없으면 유지
+        self.assertFalse(u.is_foreign(v(unicodedata.normalize("NFD", "폭로전이 된 RESCENE"))))  # 자모 분리된 한글
+        self.assertFalse(u.is_foreign(v("リセンヌ 日本デビュー", channel="UCtKtCiaWRz-d3EZn2xd1mdA")))  # 공식 채널
+
     def test_parse_blocklist(self):
         text = "# 주석\nUCaaa  # 팬채널\n\n UCbbb \n"
         self.assertEqual(u.parse_blocklist(text), {"UCaaa", "UCbbb"})
@@ -73,6 +85,7 @@ class BuildOutput(unittest.TestCase):
             "short_fan": video(200_000, is_short=True, channel="UCfan"),
             "short_low": video(90_000, is_short=True),
             "blocked": video(900_000, channel="UCblocked"),
+            "foreign": video(900_000, title="RESCENEの日本人メンバー"),
         }
         channels = {"UCfan": {"fan": True}}
         out = u.build_output(videos, channels, {"UCblocked"}, NOW)

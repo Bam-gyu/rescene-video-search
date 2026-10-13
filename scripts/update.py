@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -35,6 +36,8 @@ OFFICIAL_CHANNELS = {
 }
 
 KEYWORD = re.compile(r"리센느|rescene", re.IGNORECASE)
+HANGUL = re.compile(r"[가-힣ㄱ-ㅎㅏ-ㅣ]")
+KANA_OR_HAN = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")  # 일본어 가나, 한자
 
 
 # ---------- 순수 함수 (tests/test_update.py 에서 검증) ----------
@@ -69,6 +72,20 @@ def parse_blocklist(text):
     return ids
 
 
+def is_foreign(video):
+    """한국어가 아닌 외국 영상인지 판단한다 (공식 채널 제외).
+    제목에 한글이 없고 일본어·중국어 문자가 있거나, 업로더가 지정한 음성 언어가 한국어가 아니면 외국 영상."""
+    if video["channelId"] in OFFICIAL_CHANNELS:
+        return False
+    title = unicodedata.normalize("NFC", video["title"])  # 자모가 분리된 제목 대비
+    if HANGUL.search(title):
+        return False
+    if KANA_OR_HAN.search(title):
+        return True
+    lang = (video.get("lang") or "").lower()
+    return bool(lang) and not lang.startswith(("ko", "zxx", "und"))
+
+
 def is_short_video(duration_seconds, embed_width, embed_height):
     """3분 이하 세로(또는 정사각형) 영상이면 쇼츠."""
     return duration_seconds <= SHORT_MAX_SECONDS and embed_height >= embed_width > 0
@@ -94,7 +111,7 @@ def prune(videos, now):
 def build_output(videos, channels, blocklist, now):
     long_list, shorts = [], []
     for vid, v in videos.items():
-        if v["channelId"] in blocklist or not passes_threshold(v):
+        if v["channelId"] in blocklist or not passes_threshold(v) or is_foreign(v):
             continue
         item = {"id": vid, **{k: v[k] for k in ("title", "channelId", "channelTitle", "publishedAt", "views", "thumbnail")},
                 "listedAt": v.get("listedAt")}
@@ -213,6 +230,7 @@ def main(search_new=True):
             "views": int(item["statistics"].get("viewCount", 0)),
             "thumbnail": (thumbs.get("medium") or thumbs.get("default") or {}).get("url", ""),
             "isShort": is_short,
+            "lang": sn.get("defaultAudioLanguage") or sn.get("defaultLanguage") or "",
             "listedAt": old.get("listedAt"),
         }
     videos = prune(refreshed, now)
