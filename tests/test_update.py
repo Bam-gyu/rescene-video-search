@@ -11,7 +11,7 @@ NOW = datetime(2026, 10, 13, 10, 0, tzinfo=timezone.utc)
 
 def video(views, is_short=False, channel="UCother", published="2026-10-01T00:00:00Z", title="RESCENE 무대"):
     return {"title": title, "channelId": channel, "channelTitle": "채널", "publishedAt": published,
-            "views": views, "thumbnail": "", "isShort": is_short, "shortChecked": True}
+            "views": views, "thumbnail": "", "isShort": is_short}
 
 
 class PureFunctions(unittest.TestCase):
@@ -34,6 +34,15 @@ class PureFunctions(unittest.TestCase):
         self.assertFalse(u.is_fan_channel("UCkbs", broadcaster))
         self.assertFalse(u.is_fan_channel("UCtKtCiaWRz-d3EZn2xd1mdA", fan))  # 공식 채널은 예외
         self.assertFalse(u.is_fan_channel("UCempty", []))
+        self.assertFalse(u.is_fan_channel("UCbig", fan, subscribers=194_000))  # 방송사 프로그램 채널
+        self.assertTrue(u.is_fan_channel("UCfan", fan, subscribers=50_000))
+
+    def test_is_short_video(self):
+        self.assertTrue(u.is_short_video(45, 270, 480))  # 세로
+        self.assertTrue(u.is_short_video(170, 480, 480))  # 정사각형, 3분 이내
+        self.assertFalse(u.is_short_video(45, 480, 270))  # 가로
+        self.assertFalse(u.is_short_video(200, 270, 480))  # 3분 초과 세로
+        self.assertFalse(u.is_short_video(30, 0, 0))  # 정보 없음
 
     def test_parse_blocklist(self):
         text = "# 주석\nUCaaa  # 팬채널\n\n UCbbb \n"
@@ -70,7 +79,7 @@ class BuildOutput(unittest.TestCase):
         self.assertEqual([v["id"] for v in out["long"]], ["long_new", "long_old"])
         self.assertEqual([v["id"] for v in out["shorts"]], ["short_fan"])  # 쇼츠는 팬 채널도 허용
         self.assertEqual(out["updatedAt"], "2026-10-13T10:00:00Z")
-        self.assertNotIn("shortChecked", out["long"][0])
+        self.assertNotIn("isShort", out["long"][0])
 
 
 if __name__ == "__main__":

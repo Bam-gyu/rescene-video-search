@@ -9,7 +9,6 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -26,6 +25,7 @@ RECENT_DAYS = 7  # 최신순 검색 범위
 RECHECK_DAYS = 60  # 기준 미달 영상을 다시 확인하는 기간
 FAN_SAMPLE = 20  # 팬 채널 판정에 쓰는 최근 업로드 수
 FAN_RATIO = 0.5  # 이 비율을 넘게 리센느 영상이면 팬 채널
+FAN_MAX_SUBSCRIBERS = 100_000  # 이 이상이면 방송사 등으로 보고 팬 채널 판정에서 제외
 CHANNEL_RECHECK_DAYS = 30
 SHORT_MAX_SECONDS = 180  # 이보다 길면 쇼츠가 될 수 없음
 
@@ -52,9 +52,9 @@ def mentions_rescene(*texts):
     return any(KEYWORD.search(t or "") for t in texts)
 
 
-def is_fan_channel(channel_id, upload_texts):
-    """최근 업로드 대부분이 리센느 영상인 비공식 채널이면 팬 채널로 본다."""
-    if channel_id in OFFICIAL_CHANNELS or not upload_texts:
+def is_fan_channel(channel_id, upload_texts, subscribers=0):
+    """최근 업로드 대부분이 리센느 영상인 비공식 소규모 채널이면 팬 채널로 본다."""
+    if channel_id in OFFICIAL_CHANNELS or not upload_texts or subscribers >= FAN_MAX_SUBSCRIBERS:
         return False
     hits = sum(1 for t in upload_texts if mentions_rescene(t))
     return hits / len(upload_texts) > FAN_RATIO
@@ -67,6 +67,11 @@ def parse_blocklist(text):
         if line:
             ids.add(line)
     return ids
+
+
+def is_short_video(duration_seconds, embed_width, embed_height):
+    """3분 이하 세로(또는 정사각형) 영상이면 쇼츠."""
+    return duration_seconds <= SHORT_MAX_SECONDS and embed_height >= embed_width > 0
 
 
 def passes_threshold(video):
@@ -131,29 +136,18 @@ def search(query, order, published_after, pages):
 def fetch_videos(ids):
     ids = list(ids)
     for i in range(0, len(ids), 50):
-        res = api("videos", part="snippet,statistics,contentDetails", id=",".join(ids[i:i + 50]), maxResults=50)
+        # maxWidth 를 주면 player.embedWidth/Height 가 원본 화면비대로 온다 (쇼츠 판별용)
+        res = api("videos", part="snippet,statistics,contentDetails,player", id=",".join(ids[i:i + 50]),
+                  maxResults=50, maxWidth=480)
         yield from res.get("items", [])
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
-
-
-_no_redirect = urllib.request.build_opener(_NoRedirect)
-
-
-def check_is_short(video_id):
-    """youtube.com/shorts/ID 가 200 이면 쇼츠, 303(일반 주소로 이동)이면 롱폼. 판단 불가면 None."""
-    req = urllib.request.Request(f"https://www.youtube.com/shorts/{video_id}", method="HEAD",
-                                 headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        status = _no_redirect.open(req, timeout=8).status
-    except urllib.error.HTTPError as e:
-        status = e.code
-    except (urllib.error.URLError, TimeoutError, OSError):
-        return None
-    return {200: True, 303: False}.get(status)
+def subscriber_counts(channel_ids):
+    ids, counts = list(channel_ids), {}
+    for i in range(0, len(ids), 50):
+        for c in api("channels", part="statistics", id=",".join(ids[i:i + 50]), maxResults=50).get("items", []):
+            counts[c["id"]] = int(c["statistics"].get("subscriberCount", 0))
+    return counts
 
 
 def recent_upload_texts(channel_id):
@@ -183,7 +177,7 @@ def rebuild_only():
     write_output(state["videos"], state["channels"], blocklist, parse_time(old["updatedAt"]))
 
 
-def main():
+def main(search_new=True):
     now = datetime.now(timezone.utc)
     state = json.loads(STATE_PATH.read_text()) if STATE_PATH.exists() else {"videos": {}, "channels": {}}
     videos, channels = state["videos"], state["channels"]
@@ -192,7 +186,7 @@ def main():
     recent_after = (now - timedelta(days=RECENT_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
     view_pages = 2 if videos else 10  # 첫 실행은 과거 영상까지 넉넉히
     found = set()
-    for q in QUERIES:
+    for q in (QUERIES if search_new else []):
         found |= search(q, "date", recent_after, pages=4)
         found |= search(q, "viewCount", SEARCH_SINCE, pages=view_pages)
 
@@ -202,26 +196,14 @@ def main():
              if mentions_rescene(it["snippet"]["title"], it["snippet"].get("description"),
                                  " ".join(it["snippet"].get("tags", [])))]
 
-    # 쇼츠 여부는 기준(5만)을 넘을 수 있는 짧은 영상만, 병렬로 확인
-    to_check = [it["id"] for it in items
-                if not videos.get(it["id"], {}).get("shortChecked")
-                and int(it["statistics"].get("viewCount", 0)) >= LONG_MIN_VIEWS
-                and parse_duration(it["contentDetails"].get("duration")) <= SHORT_MAX_SECONDS]
-    print(f"쇼츠 여부 확인 {len(to_check)}개", flush=True)
-    with ThreadPoolExecutor(max_workers=16) as pool:
-        short_results = dict(zip(to_check, pool.map(check_is_short, to_check)))
-
     refreshed = {}
     for item in items:
         sn = item["snippet"]
         vid = item["id"]
         old = videos.get(vid, {})
-        is_short, short_checked = old.get("isShort"), old.get("shortChecked", False)
-        if not short_checked:
-            duration = parse_duration(item["contentDetails"].get("duration"))
-            result = False if duration > SHORT_MAX_SECONDS else short_results.get(vid)
-            short_checked = result is not None
-            is_short = result if short_checked else duration <= 60  # 미확인이면 다음 실행 때 다시 확인
+        player = item.get("player", {})
+        is_short = is_short_video(parse_duration(item["contentDetails"].get("duration")),
+                                  int(player.get("embedWidth", 0)), int(player.get("embedHeight", 0)))
         thumbs = sn.get("thumbnails", {})
         refreshed[vid] = {
             "title": sn["title"],
@@ -231,7 +213,6 @@ def main():
             "views": int(item["statistics"].get("viewCount", 0)),
             "thumbnail": (thumbs.get("medium") or thumbs.get("default") or {}).get("url", ""),
             "isShort": is_short,
-            "shortChecked": short_checked,
             "listedAt": old.get("listedAt"),
         }
     videos = prune(refreshed, now)
@@ -241,15 +222,17 @@ def main():
             v["listedAt"] = stamp  # 처음 목록에 오른 시각 (페이지의 NEW 표시용)
 
     # 롱폼 기준을 넘은 영상의 채널만 팬 채널 여부 확인
-    print("팬 채널 확인", flush=True)
+    to_check = {}
     for v in videos.values():
         if v["isShort"] or not passes_threshold(v):
             continue
-        cid = v["channelId"]
-        checked = channels.get(cid, {}).get("checkedAt")
-        if checked and now - parse_time(checked) < timedelta(days=CHANNEL_RECHECK_DAYS):
-            continue
-        channels[cid] = {"title": v["channelTitle"], "fan": is_fan_channel(cid, recent_upload_texts(cid)),
+        checked = channels.get(v["channelId"], {}).get("checkedAt")
+        if not checked or now - parse_time(checked) >= timedelta(days=CHANNEL_RECHECK_DAYS):
+            to_check[v["channelId"]] = v["channelTitle"]
+    print(f"팬 채널 확인 {len(to_check)}개", flush=True)
+    subscribers = subscriber_counts(to_check)
+    for cid, title in to_check.items():
+        channels[cid] = {"title": title, "fan": is_fan_channel(cid, recent_upload_texts(cid), subscribers.get(cid, 0)),
                          "checkedAt": stamp}
 
     STATE_PATH.write_text(json.dumps({"videos": videos, "channels": channels}, ensure_ascii=False, indent=1))
@@ -262,4 +245,4 @@ if __name__ == "__main__":
     elif not os.environ.get("YOUTUBE_API_KEY"):
         sys.exit("YOUTUBE_API_KEY 환경변수가 필요합니다.")
     else:
-        main()
+        main(search_new="--no-search" not in sys.argv)
