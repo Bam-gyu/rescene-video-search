@@ -55,7 +55,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data
           git diff --cached --quiet || git commit -m "영상 목록 갱신 $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M')"
-          git pull --rebase
+          git pull --rebase -X theirs  # 데이터 파일은 매번 통째로 다시 만들므로 이번 실행 결과를 우선
           git push
 
       - uses: actions/configure-pages@v5
