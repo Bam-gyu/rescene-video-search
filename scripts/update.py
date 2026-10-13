@@ -74,7 +74,7 @@ def parse_blocklist(text):
 
 def is_foreign(video):
     """한국어가 아닌 외국 영상인지 판단한다 (공식 채널 제외).
-    제목에 한글이 없고 일본어·중국어 문자가 있거나, 업로더가 지정한 음성 언어가 한국어가 아니면 외국 영상."""
+    제목에 한글이 없고 일본어·중국어 문자가 있거나, 업로더가 지정한 음성 언어가 한국어·영어가 아니면 외국 영상."""
     if video["channelId"] in OFFICIAL_CHANNELS:
         return False
     title = unicodedata.normalize("NFC", video["title"])  # 자모가 분리된 제목 대비
@@ -83,7 +83,8 @@ def is_foreign(video):
     if KANA_OR_HAN.search(title):
         return True
     lang = (video.get("lang") or "").lower()
-    return bool(lang) and not lang.startswith(("ko", "zxx", "und"))
+    # 영어는 방송사 글로벌 채널·KCON·아이돌 공식 채널이 많이 써서 외국 영상으로 보지 않음
+    return bool(lang) and not lang.startswith(("ko", "en", "zxx", "und"))
 
 
 def is_short_video(duration_seconds, embed_width, embed_height):

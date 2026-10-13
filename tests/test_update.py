@@ -52,6 +52,7 @@ class PureFunctions(unittest.TestCase):
         self.assertTrue(u.is_foreign(v("【RESCENE中字】大阪之旅真崩潰")))  # 중국어
         self.assertTrue(u.is_foreign(v("ELA TEM 34 ANOS E PARECE PARTE DO RESCENE!!", lang="pt-BR")))
         self.assertFalse(u.is_foreign(v("[K-POP] RESCENE Eats Like Family!", lang="ko")))  # 영어 제목, 한국어 음성
+        self.assertFalse(u.is_foreign(v("[K-POP] RESCENE Reveal Their Dorm", lang="en")))  # MBC WORLD 같은 글로벌 채널
         self.assertFalse(u.is_foreign(v("RESCENE - LOVE ATTACK")))  # 언어 정보 없으면 유지
         self.assertFalse(u.is_foreign(v(unicodedata.normalize("NFD", "폭로전이 된 RESCENE"))))  # 자모 분리된 한글
         self.assertFalse(u.is_foreign(v("リセンヌ 日本デビュー", channel="UCtKtCiaWRz-d3EZn2xd1mdA")))  # 공식 채널
