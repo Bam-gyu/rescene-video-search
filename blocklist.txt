@@ -1,3 +1,57 @@
 # 여기에 적힌 채널은 롱폼·쇼츠 모두에서 제외됩니다.
 # 한 줄에 채널 ID 하나, # 뒤는 메모입니다.
 # 예) UCxxxxxxxxxxxxxxxxxxxxxx  # 채널 이름
+
+# 2026-10-13 롱폼 정리: 리센느 비출연 채널 (노래모음·가사·편집·커버·분석·팬 직캠)
+UCznL5L7iTgTaqSBS5yF6g7w  # 밤공원
+UCyFfGY3CzU_Sb8lE-cljEcQ  # 달플리 𝑷𝒍𝒂𝒚𝒍𝒊𝒔𝒕
+UCMA3vZg15MuDE0H72VdicHA  # JINSEE
+UCZBRPzSoPVleiytNTYGeSPg  # JD TAPE
+UCoBcjaSab_CLwBOKe-8Fvjw  # 웅키
+UCuqFFZafd0f3PdOmL7_zFXw  # 슬랴+
+UCNa7pMFfTdLJ4LEIS7MeqMQ  # 에딩
+UCgsUhi54R6UaQzMkV_O7G0w  # Puno Autopop
+UCHztIyDNlLlZ6JA85a6BdCw  # Chaereve
+UCN57TTLVO6gJwE1xRaKXavg  # 구름이
+UC6aqbV_r_7TBELQ7N9r-Q4Q  # 차누 CHANOO
+UC7H4JJ8o0kwBnYdTavPGzgA  # 공칠 Ayo
+UCSWAL4JDNYZax_FatwYWrVQ  # BLACK CAT
+UChqdPRM-sGwg-bi_j6io58Q  # Epiximin
+UCVqIt8K16hZkYwWx52756hg  # ASIAN DANCE MIRROR
+UCqpxbttG0aVF69KVmMVtECA  # HelloOutdoors
+UCgZlBRLRB1-0l-qL9BkecLQ  # ARTBEAT
+UCPw6aQ2w-4CDUzY7gY1JyAA  # 신용재
+UCZG0SeU3543pCYS1wndwOJw  # ERRDAY CITYPOP (얼데이시티팝)
+UCkVBepcU7jd1LjgKKfjz83Q  # ERRDAY GROOVE (얼데이그루브)
+UCE7oF-xa-jZ8-V-bvunafFw  # ERRDAY DRIP (얼데이드립)
+UCxT1YkZKatiuPY5cqDWXmJw  # ERRDAY WAVE (얼데이웨이브)
+UCXDwVFlgBZzSEIHJBIxJvRw  # hrtzwav (하츠웨이브)
+UC1AFZwAhTFFfiR1t31aqi7A  # 강철가요단
+UCkCTUChY5TX1KPogR_Skzyw  # 힡빝 HitBeat
+UCqo9fFgjsWa0nne6-3ijYrA  # 한선 Hanse0n ARCHIVE
+UCkaqbbqryjW85LJqx4rI92w  # 렢앤롸잇
+UCrZhFTf7O1goWeaIjZ8VL9Q  # 듣기
+UCIXvXBYSc9fQ7Ri5SM1r8xA  # 라이너의 컬쳐쇼크
+UCae8e2cBxyYIpoHLqcyGnlg  # 선물 sunmool
+UCxlWck-ta5rTNAmXVJLO6Ng  # 비디터ᴠɪᴅɪᴛᴏʀ
+UCfdJSy8F5BdB-EgbVPGWmZg  # 몰랑몰랑
+UCWBhajLdX4Go7KHzDWyBHXw  # 꿀튜브
+UCYnfSndl95qg-RNEAX6gw5Q  # 열꽃심리학
+UC5T4b53jVkm07JbYoyYiu7A  # 흑백리뷰
+UCG-Q2GNiSzEps0kDzCFq_JQ  # 아이돌월드
+UCfrO3ZMC-rOThB-NSxfGjTQ  # 털어드림
+UCMfL1RBGwnmqiKwLT3622Cw  # 예술잡썰
+UCQLfdihF1WwbuVcgJq6x6Iw  # LookSam
+UC092e5GLtfXQMFRCoJYB0lw  # 원가 공개 경제학
+UCEvPBqVvVKlpyV9hRhR1WnQ  # 스풉(SPOOP)
+UCW5ZQvBMoWQFvuZP4Me1hYQ  # 노래 쉽게 알려주는 오보컬
+UCiYY-MzXvjmNORydFFiK2EQ  # 전트로픽
+UCvb6EOCbnw0Q0pef5MNT9Lw  # 트렌디 TRENDY
+UC1r112Pr9Ngcg2NtcE946HQ  # 맛상무
+UCgdGF39lu_7vcrsCLcQ3nfg  # 악성 내성인 정일영
+UCKjJtO-yL92lrqxAaPOJ49g  # でで 뎨뎨
+UC8yPhlmo-4MY5ZfF-cw3JRg  # Rock Music
+UCennTzLuqnN1uS8gfpUi7fQ  # CH Park
+UCASoSKDrfdkL4uipbv5mghw  # saleidem
+UCbCnnN4ZKbwElYG_1zVChlg  # ruda
+UC9HvH0B10OGbDgQR7hqJ3Mw  # 풋티재 FOOTYJAE
