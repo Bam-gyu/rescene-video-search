@@ -9,6 +9,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -147,10 +148,10 @@ def check_is_short(video_id):
     req = urllib.request.Request(f"https://www.youtube.com/shorts/{video_id}", method="HEAD",
                                  headers={"User-Agent": "Mozilla/5.0"})
     try:
-        status = _no_redirect.open(req, timeout=15).status
+        status = _no_redirect.open(req, timeout=8).status
     except urllib.error.HTTPError as e:
         status = e.code
-    except urllib.error.URLError:
+    except (urllib.error.URLError, TimeoutError, OSError):
         return None
     return {200: True, 303: False}.get(status)
 
@@ -196,19 +197,31 @@ def main():
         found |= search(q, "viewCount", SEARCH_SINCE, pages=view_pages)
 
     # 새로 찾은 영상 + 기존 영상의 조회수를 함께 갱신 (삭제·비공개된 영상은 결과에 없음)
+    print(f"검색 결과 {len(found)}개, 기존 {len(videos)}개 조회수 확인", flush=True)
+    items = [it for it in fetch_videos(found | set(videos))
+             if mentions_rescene(it["snippet"]["title"], it["snippet"].get("description"),
+                                 " ".join(it["snippet"].get("tags", [])))]
+
+    # 쇼츠 여부는 기준(5만)을 넘을 수 있는 짧은 영상만, 병렬로 확인
+    to_check = [it["id"] for it in items
+                if not videos.get(it["id"], {}).get("shortChecked")
+                and int(it["statistics"].get("viewCount", 0)) >= LONG_MIN_VIEWS
+                and parse_duration(it["contentDetails"].get("duration")) <= SHORT_MAX_SECONDS]
+    print(f"쇼츠 여부 확인 {len(to_check)}개", flush=True)
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        short_results = dict(zip(to_check, pool.map(check_is_short, to_check)))
+
     refreshed = {}
-    for item in fetch_videos(found | set(videos)):
+    for item in items:
         sn = item["snippet"]
-        if not mentions_rescene(sn["title"], sn.get("description"), " ".join(sn.get("tags", []))):
-            continue
         vid = item["id"]
         old = videos.get(vid, {})
         is_short, short_checked = old.get("isShort"), old.get("shortChecked", False)
         if not short_checked:
             duration = parse_duration(item["contentDetails"].get("duration"))
-            result = False if duration > SHORT_MAX_SECONDS else check_is_short(vid)
+            result = False if duration > SHORT_MAX_SECONDS else short_results.get(vid)
             short_checked = result is not None
-            is_short = result if short_checked else duration <= 60  # 판단 불가면 다음 실행 때 다시 확인
+            is_short = result if short_checked else duration <= 60  # 미확인이면 다음 실행 때 다시 확인
         thumbs = sn.get("thumbnails", {})
         refreshed[vid] = {
             "title": sn["title"],
@@ -228,6 +241,7 @@ def main():
             v["listedAt"] = stamp  # 처음 목록에 오른 시각 (페이지의 NEW 표시용)
 
     # 롱폼 기준을 넘은 영상의 채널만 팬 채널 여부 확인
+    print("팬 채널 확인", flush=True)
     for v in videos.values():
         if v["isShort"] or not passes_threshold(v):
             continue
