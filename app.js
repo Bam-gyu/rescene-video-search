@@ -1,7 +1,7 @@
 const REPO = "Bam-gyu/rescene-video-search";
 const RULES = {
-  long: "조회수 5만 이상 · 리센느 전용 팬 채널 제외 · 최신순",
-  shorts: "조회수 10만 이상 · 최신순",
+  long: "최근 7일 업로드 · 조회수 5만 이상 · 리센느 전용 팬 채널 제외",
+  shorts: "최근 7일 업로드 · 조회수 10만 이상",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -26,9 +26,12 @@ const fmtDate = (iso) => {
   const d = new Date(iso);
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 };
-const monthKey = (iso) => {
+const dayKey = (iso) => {
   const d = new Date(iso);
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 864e5);
+  if (days === 0) return "오늘";
+  if (days === 1) return "어제";
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`;
 };
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 // API 제목은 HTML 엔티티가 섞여 올 수 있어 한 번 풀어준다
@@ -72,10 +75,10 @@ function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === tab));
   $("rule").textContent = RULES[tab];
 
-  // 월별로 묶어서 표시 (목록은 이미 최신순)
+  // 업로드 날짜별로 묶어서 표시 (목록은 이미 최신순)
   const groups = new Map();
   for (const v of items) {
-    const k = monthKey(v.publishedAt);
+    const k = dayKey(v.publishedAt);
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(v);
   }
@@ -86,7 +89,7 @@ function render() {
 
   const empty = $("empty");
   empty.hidden = items.length > 0;
-  empty.textContent = q ? `'${$("filter").value.trim()}'에 해당하는 영상이 없어요.` : "아직 조건에 맞는 영상이 없어요.";
+  empty.textContent = q ? `'${$("filter").value.trim()}'에 해당하는 영상이 없어요.` : "최근 7일 동안 조건에 맞는 영상이 없어요.";
 
   renderHidden();
 }

@@ -10,7 +10,7 @@ import update as u
 NOW = datetime(2026, 10, 13, 10, 0, tzinfo=timezone.utc)
 
 
-def video(views, is_short=False, channel="UCother", published="2026-10-01T00:00:00Z", title="RESCENE 무대"):
+def video(views, is_short=False, channel="UCother", published="2026-10-10T00:00:00Z", title="RESCENE 무대"):
     return {"title": title, "channelId": channel, "channelTitle": "채널", "publishedAt": published,
             "views": views, "thumbnail": "", "isShort": is_short}
 
@@ -67,20 +67,21 @@ class PureFunctions(unittest.TestCase):
         self.assertFalse(u.passes_threshold(video(99_999, is_short=True)))
         self.assertTrue(u.passes_threshold(video(100_000, is_short=True)))
 
-    def test_prune_keeps_passing_and_recent(self):
+    def test_prune_keeps_only_last_7_days(self):
         videos = {
-            "old_low": video(1_000, published="2025-01-01T00:00:00Z"),
-            "old_high": video(60_000, published="2025-01-01T00:00:00Z"),
-            "new_low": video(1_000, published="2026-10-10T00:00:00Z"),
+            "old_high": video(900_000, published="2026-10-06T09:59:00Z"),  # 7일 하고 1분
+            "edge": video(1_000, published="2026-10-06T10:00:00Z"),  # 정확히 7일
+            "new_low": video(1_000, published="2026-10-12T00:00:00Z"),
         }
-        self.assertEqual(set(u.prune(videos, NOW)), {"old_high", "new_low"})
+        self.assertEqual(set(u.prune(videos, NOW)), {"edge", "new_low"})
 
 
 class BuildOutput(unittest.TestCase):
     def test_split_filter_and_sort(self):
         videos = {
-            "long_old": video(70_000, published="2026-01-01T00:00:00Z"),
-            "long_new": video(70_000, published="2026-09-01T00:00:00Z"),
+            "long_old": video(70_000, published="2026-10-07T00:00:00Z"),
+            "long_new": video(70_000, published="2026-10-12T00:00:00Z"),
+            "long_expired": video(900_000, published="2026-10-01T00:00:00Z"),
             "long_low": video(10_000),
             "long_fan": video(900_000, channel="UCfan"),
             "short_fan": video(200_000, is_short=True, channel="UCfan"),

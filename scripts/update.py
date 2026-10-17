@@ -21,9 +21,7 @@ BLOCKLIST_PATH = ROOT / "blocklist.txt"
 QUERIES = ["#리센느", "리센느", "RESCENE"]
 LONG_MIN_VIEWS = 50_000
 SHORT_MIN_VIEWS = 100_000
-SEARCH_SINCE = "2024-01-01T00:00:00Z"  # 리센느 공식 채널 개설 시점
-RECENT_DAYS = 7  # 최신순 검색 범위
-RECHECK_DAYS = 60  # 기준 미달 영상을 다시 확인하는 기간
+MAX_AGE_DAYS = 7  # 업로드 후 이 기간이 지난 영상은 목록·추적에서 제외
 FAN_SAMPLE = 20  # 팬 채널 판정에 쓰는 최근 업로드 수
 FAN_RATIO = 0.5  # 이 비율을 넘게 리센느 영상이면 팬 채널
 FAN_MAX_SUBSCRIBERS = 100_000  # 이 이상이면 방송사 등으로 보고 팬 채널 판정에서 제외
@@ -101,18 +99,19 @@ def parse_time(iso):
 
 
 def is_recent(video, now):
-    return now - parse_time(video["publishedAt"]) <= timedelta(days=RECHECK_DAYS)
+    return now - parse_time(video["publishedAt"]) <= timedelta(days=MAX_AGE_DAYS)
 
 
 def prune(videos, now):
-    """기준을 넘었거나 아직 재확인 기간 안인 영상만 남긴다."""
-    return {vid: v for vid, v in videos.items() if passes_threshold(v) or is_recent(v, now)}
+    """업로드 후 MAX_AGE_DAYS 이내인 영상만 남긴다."""
+    return {vid: v for vid, v in videos.items() if is_recent(v, now)}
 
 
 def build_output(videos, channels, blocklist, now):
     long_list, shorts = [], []
     for vid, v in videos.items():
-        if v["channelId"] in blocklist or not passes_threshold(v) or is_foreign(v):
+        if (v["channelId"] in blocklist or not passes_threshold(v) or not is_recent(v, now)
+                or is_foreign(v)):
             continue
         item = {"id": vid, **{k: v[k] for k in ("title", "channelId", "channelTitle", "publishedAt", "views", "thumbnail")},
                 "listedAt": v.get("listedAt")}
@@ -201,12 +200,11 @@ def main(search_new=True):
     videos, channels = state["videos"], state["channels"]
     blocklist = parse_blocklist(BLOCKLIST_PATH.read_text()) if BLOCKLIST_PATH.exists() else set()
 
-    recent_after = (now - timedelta(days=RECENT_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    view_pages = 2 if videos else 10  # 첫 실행은 과거 영상까지 넉넉히
+    recent_after = (now - timedelta(days=MAX_AGE_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
     found = set()
     for q in (QUERIES if search_new else []):
         found |= search(q, "date", recent_after, pages=4)
-        found |= search(q, "viewCount", SEARCH_SINCE, pages=view_pages)
+        found |= search(q, "viewCount", recent_after, pages=2)
 
     # 새로 찾은 영상 + 기존 영상의 조회수를 함께 갱신 (삭제·비공개된 영상은 결과에 없음)
     print(f"검색 결과 {len(found)}개, 기존 {len(videos)}개 조회수 확인", flush=True)
