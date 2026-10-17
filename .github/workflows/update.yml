@@ -2,7 +2,7 @@ name: 매일 영상 갱신
 
 on:
   schedule:
-    - cron: "0 10 * * *" # 매일 19:00 KST (GitHub 사정으로 몇 분~수십 분 늦을 수 있음)
+    - cron: "7 10 * * *" # 매일 19:07 KST. 정각은 GitHub 예약이 몰려 크게 지연돼서 7분으로 피함
   workflow_dispatch: # Actions 탭에서 수동 실행
     inputs:
       no_search:
