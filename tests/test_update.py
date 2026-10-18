@@ -61,6 +61,16 @@ class PureFunctions(unittest.TestCase):
         text = "# 주석\nUCaaa  # 팬채널\n\n UCbbb \n"
         self.assertEqual(u.parse_blocklist(text), {"UCaaa", "UCbbb"})
 
+    def test_load_blocklist_reads_file_and_folder(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            (d / "blocklist.txt").write_text("UCaaa  # 기존\n")
+            (d / "blocklist").mkdir()
+            (d / "blocklist" / "UCbbb.txt").write_text("UCbbb  # 버튼으로 추가\n")
+            self.assertEqual(u.load_blocklist(d / "blocklist.txt", d / "blocklist"), {"UCaaa", "UCbbb"})
+            self.assertEqual(u.load_blocklist(d / "none.txt", d / "nofolder"), set())
+
     def test_thresholds(self):
         self.assertTrue(u.passes_threshold(video(50_000)))
         self.assertFalse(u.passes_threshold(video(49_999)))

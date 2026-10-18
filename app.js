@@ -124,7 +124,7 @@ function hideChannel(id, title) {
   );
 }
 
-document.addEventListener("click", async (e) => {
+document.addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t) return;
   if (t.dataset.tab) {
@@ -140,12 +140,12 @@ document.addEventListener("click", async (e) => {
     $("toast").hidden = true;
     render();
   } else if (t.dataset.block) {
-    // 저장소의 blocklist.txt 에 붙여넣을 줄을 복사하고 편집 화면을 연다
+    // 내용이 미리 채워진 GitHub 새 파일 화면(blocklist/채널ID.txt)을 연다. Commit 만 누르면 된다.
     const id = t.dataset.block;
-    const line = `${id}  # ${hidden[id] || ""}`;
-    try { await navigator.clipboard.writeText(line); } catch {}
-    window.open(`https://github.com/${REPO}/edit/main/blocklist.txt`, "_blank", "noopener");
-    toast("복사된 줄을 blocklist.txt 맨 아래에 붙여넣고 Commit 하세요. 다음 7시 갱신부터 반영돼요.", 10000);
+    const value = `${id}  # ${hidden[id] || ""}\n`;
+    const params = new URLSearchParams({ filename: `${id}.txt`, value });
+    window.open(`https://github.com/${REPO}/new/main/blocklist?${params}`, "_blank", "noopener");
+    toast("열린 GitHub 화면에서 Commit changes 만 누르면 돼요. 1~2분 뒤 페이지에 반영돼요.", 10000);
   }
 });
 

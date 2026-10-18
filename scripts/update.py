@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 STATE_PATH = ROOT / "data" / "state.json"
 OUTPUT_PATH = ROOT / "data" / "videos.json"
 BLOCKLIST_PATH = ROOT / "blocklist.txt"
+BLOCKLIST_DIR = ROOT / "blocklist"  # 페이지의 차단 버튼이 채널마다 파일을 하나씩 만든다
 
 QUERIES = ["#리센느", "리센느", "RESCENE"]
 LONG_MIN_VIEWS = 50_000
@@ -59,6 +60,13 @@ def is_fan_channel(channel_id, upload_texts, subscribers=0):
         return False
     hits = sum(1 for t in upload_texts if mentions_rescene(t))
     return hits / len(upload_texts) > FAN_RATIO
+
+
+def load_blocklist(path=None, folder=None):
+    """blocklist.txt 와 blocklist/*.txt 의 채널 ID를 모두 읽는다."""
+    path, folder = path or BLOCKLIST_PATH, folder or BLOCKLIST_DIR
+    files = ([path] if path.exists() else []) + (sorted(folder.glob("*.txt")) if folder.is_dir() else [])
+    return set().union(*(parse_blocklist(f.read_text()) for f in files))
 
 
 def parse_blocklist(text):
@@ -199,7 +207,7 @@ def write_output(videos, channels, blocklist, now):
 def rebuild_only():
     """검색 없이 blocklist.txt 변경만 반영한다 (갱신 시각은 유지)."""
     state = json.loads(STATE_PATH.read_text()) if STATE_PATH.exists() else {"videos": {}, "channels": {}}
-    blocklist = parse_blocklist(BLOCKLIST_PATH.read_text()) if BLOCKLIST_PATH.exists() else set()
+    blocklist = load_blocklist()
     old = json.loads(OUTPUT_PATH.read_text())
     if not old.get("updatedAt"):
         return
@@ -210,7 +218,7 @@ def main(search_new=True):
     now = datetime.now(timezone.utc)
     state = json.loads(STATE_PATH.read_text()) if STATE_PATH.exists() else {"videos": {}, "channels": {}}
     videos, channels = state["videos"], state["channels"]
-    blocklist = parse_blocklist(BLOCKLIST_PATH.read_text()) if BLOCKLIST_PATH.exists() else set()
+    blocklist = load_blocklist()
 
     recent_after = (now - timedelta(days=MAX_AGE_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
     found = official_uploads() if search_new else set()
