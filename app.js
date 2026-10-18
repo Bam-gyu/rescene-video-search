@@ -1,7 +1,7 @@
 const REPO = "Bam-gyu/rescene-video-search";
 const RULES = {
   long: "최근 7일 업로드 · 조회수 5만 이상 · 리센느 전용 팬 채널 제외",
-  shorts: "최근 7일 업로드 · 조회수 10만 이상",
+  shorts: "최근 7일 업로드 · 조회수 20만 이상",
 };
 
 const $ = (id) => document.getElementById(id);

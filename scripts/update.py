@@ -20,7 +20,7 @@ BLOCKLIST_PATH = ROOT / "blocklist.txt"
 
 QUERIES = ["#리센느", "리센느", "RESCENE"]
 LONG_MIN_VIEWS = 50_000
-SHORT_MIN_VIEWS = 100_000
+SHORT_MIN_VIEWS = 200_000
 MAX_AGE_DAYS = 7  # 업로드 후 이 기간이 지난 영상은 목록·추적에서 제외
 FAN_SAMPLE = 20  # 팬 채널 판정에 쓰는 최근 업로드 수
 FAN_RATIO = 0.5  # 이 비율을 넘게 리센느 영상이면 팬 채널
@@ -150,6 +150,18 @@ def search(query, order, published_after, pages):
     return ids
 
 
+def official_uploads():
+    """공식 채널의 최근 업로드. 라이브 다시보기나 이모지 제목 쇼츠는 검색에 잘 안 잡혀서 직접 가져온다."""
+    ids = set()
+    for cid in OFFICIAL_CHANNELS:
+        try:
+            res = api("playlistItems", part="contentDetails", playlistId="UU" + cid[2:], maxResults=50)
+        except urllib.error.HTTPError:  # 업로드가 없는 채널
+            continue
+        ids.update(i["contentDetails"]["videoId"] for i in res.get("items", []))
+    return ids
+
+
 def fetch_videos(ids):
     ids = list(ids)
     for i in range(0, len(ids), 50):
@@ -201,7 +213,7 @@ def main(search_new=True):
     blocklist = parse_blocklist(BLOCKLIST_PATH.read_text()) if BLOCKLIST_PATH.exists() else set()
 
     recent_after = (now - timedelta(days=MAX_AGE_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    found = set()
+    found = official_uploads() if search_new else set()
     for q in (QUERIES if search_new else []):
         found |= search(q, "date", recent_after, pages=4)
         found |= search(q, "viewCount", recent_after, pages=2)
@@ -209,7 +221,8 @@ def main(search_new=True):
     # 새로 찾은 영상 + 기존 영상의 조회수를 함께 갱신 (삭제·비공개된 영상은 결과에 없음)
     print(f"검색 결과 {len(found)}개, 기존 {len(videos)}개 조회수 확인", flush=True)
     items = [it for it in fetch_videos(found | set(videos))
-             if mentions_rescene(it["snippet"]["title"], it["snippet"].get("description"),
+             if it["snippet"]["channelId"] in OFFICIAL_CHANNELS
+             or mentions_rescene(it["snippet"]["title"], it["snippet"].get("description"),
                                  " ".join(it["snippet"].get("tags", [])))]
 
     refreshed = {}

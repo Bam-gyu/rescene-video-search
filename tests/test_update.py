@@ -64,8 +64,8 @@ class PureFunctions(unittest.TestCase):
     def test_thresholds(self):
         self.assertTrue(u.passes_threshold(video(50_000)))
         self.assertFalse(u.passes_threshold(video(49_999)))
-        self.assertFalse(u.passes_threshold(video(99_999, is_short=True)))
-        self.assertTrue(u.passes_threshold(video(100_000, is_short=True)))
+        self.assertFalse(u.passes_threshold(video(199_999, is_short=True)))
+        self.assertTrue(u.passes_threshold(video(200_000, is_short=True)))
 
     def test_prune_keeps_only_last_7_days(self):
         videos = {
@@ -85,7 +85,7 @@ class BuildOutput(unittest.TestCase):
             "long_low": video(10_000),
             "long_fan": video(900_000, channel="UCfan"),
             "short_fan": video(200_000, is_short=True, channel="UCfan"),
-            "short_low": video(90_000, is_short=True),
+            "short_low": video(150_000, is_short=True),
             "blocked": video(900_000, channel="UCblocked"),
             "foreign": video(900_000, title="RESCENEの日本人メンバー"),
         }
